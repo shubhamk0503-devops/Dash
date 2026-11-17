@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add tracker data</title>
+<style>body{font:15px/1.5 "Segoe UI",system-ui,sans-serif;max-width:760px;margin:0 auto;padding:24px 16px;background:#f6f5f3;color:#1d1d22}
+.slot{border:2px dashed #aaa;border-radius:10px;padding:14px;margin:10px 0;background:#fff;outline:none}.slot:focus,.slot.on{border-color:#d9001b}
+.slot img{display:block;max-height:110px;margin-top:8px;border:1px solid #ccc;border-radius:4px}
+textarea{width:100%;height:240px;font:13px monospace;margin-top:8px}button{background:#d9001b;color:#fff;border:0;border-radius:6px;padding:9px 16px;font-size:15px;margin:8px 8px 0 0;cursor:pointer}
+button.g{background:#555}#msg{margin-top:10px;font-weight:600}input[type=date]{font-size:15px;padding:4px}</style></head><body>
+<h1>Add tracker screenshots</h1>
+<p>Tracker date: <input type="date" id="dt"></p>
+<p>Click a box, then paste (Ctrl+V) its screenshot, or choose a file.</p>
+<div class="slot" tabindex="0" data-k="va"><b>Image VA table</b> (LOB, App Owner, Shared, Closed, Closure %)<br><input type="file" accept="image/*"></div>
+<div class="slot" tabindex="0" data-k="co"><b>Compliance table</b><br><input type="file" accept="image/*"></div>
+<div class="slot" tabindex="0" data-k="zd"><b>Zero-day table</b> (finding name, Current)<br><input type="file" accept="image/*"></div>
+<div><button id="go">Read numbers</button><button class="g" onclick="location='/'">Back to dashboard</button></div>
+<p>Check the numbers against your screenshots (editable), then save.</p>
+<textarea id="out" spellcheck="false">{"date":"","image_va":{"shared":0,"closed":0},"compliance":{"shared":0,"closed":0},"zero_day":{}}</textarea>
+<div><button id="save">Save and update dashboard</button></div><h2>Saved dates</h2><div id="hist"></div><div id="msg"></div>
+<script>
+const imgs={},$=id=>document.getElementById(id),msg=t=>$("msg").textContent=t;let cur=null;
+document.querySelectorAll(".slot").forEach(s=>{s.onfocus=()=>cur=s;s.onclick=()=>cur=s;
+ s.querySelector("input").onchange=e=>e.target.files[0]&&put(s,e.target.files[0])});
+function put(s,f){const r=new FileReader();r.onload=()=>{imgs[s.dataset.k]=r.result;s.querySelector("img")?.remove();const i=new Image();i.src=r.result;s.appendChild(i);s.classList.add("on")};r.readAsDataURL(f)}
+document.addEventListener("paste",e=>{const it=[...e.clipboardData.items].find(i=>i.type.startsWith("image/"));if(!it)return;
+ if(!cur)return msg("Click one of the boxes first, then paste.");put(cur,it.getAsFile())});
+$("dt").value=new Date().toISOString().slice(0,10);
+async function post(u,b){const r=await fetch(u,{method:"POST",body:JSON.stringify(b)});const j=await r.json();if(j.error)throw new Error(j.error);return j}
+$("go").onclick=async()=>{if(!Object.keys(imgs).length)return msg("Add at least one screenshot first.");msg("Reading screenshots...");
+ try{const j=await post("/api/extract",{images:imgs});j.date=$("dt").value;$("out").value=JSON.stringify(j,null,2);
+  msg(j._warnings?"Some tables could not be read: "+j._warnings.join("; ")+". Fill those in by hand.":"Done. Check every number against the screenshots.")}catch(e){msg("Could not read: "+e.message)}};
+$("save").onclick=async()=>{try{await post("/api/save",JSON.parse($("out").value));location="/"}catch(e){msg("Not saved: "+e.message)}};
+async function hist(){const s=await (await fetch("/api/state")).json();
+ $("hist").innerHTML=s.snapshots.sort((a,b)=>a.date<b.date?-1:1).map(x=>`<div>${x.date} <button class="g" onclick="del('${x.date}')">Delete</button></div>`).join("")}
+async function del(d){if(confirm("Delete "+d+"?")){await post("/api/delete",{date:d});hist()}}
+hist();
+</script></body></html>

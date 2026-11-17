@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Airtel-IQ OND Tracker Dashboard</title>
+<style>
+:root{--bg:#f6f5f3;--card:#fff;--ink:#1d1d22;--mut:#6b6b76;--line:#e3e1dc;--red:#d9001b;--grn:#0f8a5f;--bar:#e9e7e2;--blu:#2b4a8b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15151a;--card:#1e1e25;--ink:#f1f0ed;--mut:#9b9ba6;--line:#2e2e38;--red:#ff4d5e;--grn:#3ccf97;--bar:#2e2e38;--blu:#8aa8ff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15151a;--card:#1e1e25;--ink:#f1f0ed;--mut:#9b9ba6;--line:#2e2e38;--red:#ff4d5e;--grn:#3ccf97;--bar:#2e2e38;--blu:#8aa8ff;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Arial,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:28px 18px 48px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:17px;margin:0 0 14px}
+.sub{color:var(--mut);margin:0 0 22px}
+.row{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+.k{color:var(--mut);font-size:13px}
+.v{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:2px 0}
+.d{font-size:13px;font-weight:600}.up{color:var(--grn)}.dn{color:var(--red)}
+.track{height:14px;background:var(--bar);border-radius:7px;overflow:hidden;margin:6px 0 12px}
+.fill{height:100%;border-radius:7px}
+.lbl{display:flex;justify-content:space-between;font-size:13px;color:var(--mut)}
+.lbl b{color:var(--ink)}
+.wide{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-bottom:14px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--mut);font-weight:600;font-size:13px}
+.tag{font-size:12px;background:var(--red);color:#fff;border-radius:4px;padding:1px 6px;margin-left:6px}
+.zd{display:grid;grid-template-columns:110px 1fr 80px;gap:10px;align-items:center;margin:9px 0;font-size:14px}
+.zd .t{height:12px;background:var(--bar);border-radius:6px;position:relative;overflow:hidden}
+.zd .p,.zd .c{position:absolute;left:0;top:0;height:100%;border-radius:6px}
+.zd .p{background:var(--mut);opacity:.45}.zd .c{background:var(--red);height:55%;top:22%}
+.leg{font-size:12px;color:var(--mut);margin-top:6px}
+.note{font-size:13px;color:var(--mut);margin-top:18px}
+@media (max-width:480px){.zd{grid-template-columns:90px 1fr 64px}}
+.trg{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(400px,1fr))}
+.trg h3{font-size:14px;margin:0 0 6px}.trg svg text{fill:var(--mut);font-size:11px}.trg svg .gl{stroke:var(--line)}
+.lg span{display:inline-block;margin:2px 12px 2px 0;font-size:12px;color:var(--mut)}.lg i{display:inline-block;width:12px;height:3px;margin-right:5px;vertical-align:middle}
+@media (max-width:480px){.trg{grid-template-columns:1fr}}
+</style></head><body><main>
+<h1>Airtel-IQ: OND Tracker dashboard</h1>
+<p class="sub">App owner: Himank Jain &nbsp;|&nbsp; Comparing 27 Oct 2026 with 3 Nov 2026 (7 days)</p>
+
+<div class="row" id="kpis"></div>
+
+<div class="wide">
+  <div class="card"><h2>Image VA closure</h2><div id="va"></div></div>
+  <div class="card"><h2>Compliance closure</h2><div id="co"></div></div>
+</div>
+
+<div class="card" style="margin-bottom:14px"><h2>Week-over-week summary</h2>
+<div class="scroll"><table id="tbl"></table></div></div>
+
+<div class="card" style="margin-bottom:14px"><h2>Trends across all saved dates</h2><div class="k" id="trn" style="margin-bottom:8px"></div><div class="trg" id="trg"></div></div>
+<div class="card" id="owc" style="margin-bottom:14px;display:none"><h2>By app owner</h2><div class="scroll" id="owt"></div></div>
+<div class="card"><h2>Zero-day findings (current count)</h2><div id="zd"></div>
+<div class="leg">Grey bar: 27 Oct &nbsp; Red bar: 3 Nov (bar lengths are scaled so small counts stay visible)</div></div>
+
+<p class="note">Source: OND Tracker, 27 Oct 2026 and 3 Nov 2026. Open = Shared minus Closed, calculated here. Zero-day items with no count on the earlier date are flagged New.</p>
+</main>
+<script>
+const fmt=n=>n.toLocaleString("en-IN");
+const D=__DATA__;
+const pct=(c,s)=>(c/s*100).toFixed(2);
+function kpi(k,v,d,good){return `<div class="card"><div class="k">${k}</div><div class="v">${v}</div><div class="d ${good?'up':'dn'}">${d}</div></div>`}
+const sg=x=>(x>=0?"+":"\u2212")+Math.abs(x).toFixed(2);
+const zdA=D.zd.reduce((s,x)=>s+x[1],0),zdB=D.zd.reduce((s,x)=>s+x[2],0);
+document.getElementById("kpis").innerHTML=
+ kpi("Image VA closure",pct(D.va.b,D.va.shared)+"%",sg(pct(D.va.b,D.va.shared)-pct(D.va.a,D.va.shared))+" pts vs 27 Oct",pct(D.va.b,D.va.shared)>=pct(D.va.a,D.va.shared))+
+ kpi("Compliance closure",pct(D.co.b,D.co.shared)+"%",sg(pct(D.co.b,D.co.shared)-pct(D.co.a,D.co.shared))+" pts vs 27 Oct",pct(D.co.b,D.co.shared)>=pct(D.co.a,D.co.shared))+
+ kpi("Open Image VA items",fmt(D.va.shared-D.va.b),"&#8722;"+fmt(D.va.b-D.va.a)+" in 7 days",1)+
+ kpi("Open zero-days",fmt(zdB),(zdB>=zdA?"+":"\u2212")+Math.abs(zdB-zdA)+" vs 27 Oct ("+zdA+")",zdB<=zdA);
+function bars(id,o,col){
+ const pa=pct(o.a,o.shared),pb=pct(o.b,o.shared);
+ document.getElementById(id).innerHTML=
+ `<div class="lbl"><span>27 Oct</span><b>${pa}% (${fmt(o.a)} of ${fmt(o.shared)})</b></div><div class="track"><div class="fill" style="width:${pa}%;background:var(--mut);opacity:.6"></div></div>
+  <div class="lbl"><span>3 Nov</span><b>${pb}% (${fmt(o.b)} of ${fmt(o.shared)})</b></div><div class="track"><div class="fill" style="width:${pb}%;background:${col}"></div></div>
+  <div class="lbl"><span>Closed this week</span><b class="up">+${fmt(o.b-o.a)}</b></div>
+  <div class="lbl"><span>Still open</span><b>${fmt(o.shared-o.b)}</b></div>`}
+bars("va",D.va,"var(--blu)");bars("co",D.co,"var(--red)");
+const r=(n,o)=>`<tr><td>${n}</td><td>${fmt(o.shared)}</td><td>${fmt(o.a)}</td><td>${fmt(o.b)}</td><td class="up">+${fmt(o.b-o.a)}</td><td>${pct(o.a,o.shared)}%</td><td>${pct(o.b,o.shared)}%</td><td>${fmt(o.shared-o.b)}</td></tr>`;
+document.getElementById("tbl").innerHTML=`<tr><th>Category</th><th>Shared</th><th>Closed 27 Oct</th><th>Closed 3 Nov</th><th>Change</th><th>Closure 27 Oct</th><th>Closure 3 Nov</th><th>Open now</th></tr>`+r("Image VA",D.va)+r("Compliance",D.co);
+const mx=Math.max(...D.zd.flat().filter(x=>typeof x==="number"));
+document.getElementById("zd").innerHTML=D.zd.map(([n,a,b])=>{
+ const dl=b-a,cls=dl>0?"dn":"up",t=a===0?'<span class="tag">New</span>':"";
+ return `<div class="zd"><div>${n}${t}</div><div class="t"><div class="p" style="width:${Math.sqrt(a/mx)*100}%"></div><div class="c" style="width:${Math.sqrt(b/mx)*100}%"></div></div><div><b>${b}</b> <span class="${cls}">${dl>0?"+":"&#8722;"}${Math.abs(dl)}</span></div></div>`}).join("")+
+ `<div class="zd" style="border-top:1px solid var(--line);padding-top:10px"><div><b>Total</b></div><div></div><div><b>${zdB}</b> <span class="dn">+${zdB-zdA}</span></div></div>`;
+const ow=D.ow;
+if(ow&&(ow.va.length||ow.co.length)){document.getElementById("owc").style.display="";
+ const tb=(t,rows)=>`<h2 style="font-size:15px;margin:14px 0 8px">${t}</h2><table><tr><th>Owner</th><th>Shared</th><th>Closed 27 Oct</th><th>Closed 3 Nov</th><th>Change</th><th>Closure 27 Oct</th><th>Closure 3 Nov</th><th>Open now</th></tr>`+rows.map(([n,s,a,b])=>{const dl=b-a;return `<tr><td>${n}</td><td>${fmt(s)}</td><td>${fmt(a)}</td><td>${fmt(b)}</td><td class="${dl<0?"dn":"up"}">${dl<0?"&#8722;":"+"}${fmt(Math.abs(dl))}</td><td>${pct(a,s)}%</td><td>${pct(b,s)}%</td><td>${fmt(s-b)}</td></tr>`}).join("")+`</table>`;
+ document.getElementById("owt").innerHTML=(ow.va.length?tb("Image VA",ow.va):"")+(ow.co.length?tb("Compliance",ow.co):"")}
+
+const H=D.hist||[],COL=["#d9001b","#2b4a8b","#0f8a5f","#b7791f","#805ad5","#dd6b20","#319795","#718096"];
+const dlb=d=>new Date(d+"T00:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+const cp=(a)=>a&&a[0]?a[1]/a[0]*100:null;
+function lineChart(title,series,isPct){
+ const id="ch"+Math.random().toString(36).slice(2,7),W=600,Ht=230,L=54,R=12,T=10,B=26,n=H.length;
+ const ser=series.filter(s=>s.v.some(v=>v!==null)).slice(0,8);if(!ser.length)return"";
+ const mx=Math.max(isPct?1:0,...ser.flatMap(s=>s.v.filter(v=>v!==null)))*1.12||1,X=i=>L+(n>1?i/(n-1)*(W-L-R):(W-L-R)/2),Y=v=>T+(1-v/mx)*(Ht-T-B);
+ const lab=v=>isPct?v.toFixed(isPct&&mx<10?1:0)+"%":fmt(Math.round(v));
+ let s=`<svg viewBox="0 0 ${W} ${Ht}" width="100%" role="img" aria-label="${title}">`;
+ for(let i=0;i<=4;i++){const v=mx*i/4,y=Y(v);s+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text x="${L-6}" y="${y+4}" text-anchor="end">${lab(v)}</text>`}
+ H.forEach((h,i)=>s+=`<text x="${X(i)}" y="${Ht-7}" text-anchor="middle">${dlb(h.d)}</text>`);
+ ser.forEach((q,j)=>{const c=COL[j%8],p=q.v.map((v,i)=>v===null?null:[X(i),Y(v)]).filter(Boolean);
+  s+=`<polyline fill="none" stroke="${c}" stroke-width="2.5" points="${p.map(x=>x.join(",")).join(" ")}"/>`+p.map(x=>`<circle cx="${x[0]}" cy="${x[1]}" r="3.5" fill="${c}"/>`).join("")});
+ const lg=ser.length>1?`<div class="lg">${ser.map((q,j)=>`<span><i style="background:${COL[j%8]}"></i>${q.name}</span>`).join("")}</div>`:"";
+ const last=ser.length===1?`<div class="k">Latest: <b style="color:var(--ink)">${(v=>v===null?"-":isPct?v.toFixed(2)+"%":fmt(Math.round(v)))(ser[0].v[n-1])}</b></div>`:"";
+ return `<div><h3>${title}</h3>${s}</svg>${lg}${last}</div>`}
+function trends(){if(!H.length)return;
+ const sums=o=>Object.values(o||{}).reduce((a,x)=>a+x,0);
+ let h="";
+ h+=lineChart("Closure %",[{name:"Image VA",v:H.map(x=>cp(x.va))},{name:"Compliance",v:H.map(x=>cp(x.co))}],true);
+ h+=lineChart("Open Image VA items",[{name:"Open",v:H.map(x=>x.va[0]-x.va[1])}],false);
+ h+=lineChart("Open Compliance items",[{name:"Open",v:H.map(x=>x.co[0]-x.co[1])}],false);
+ h+=lineChart("Open zero-days (total)",[{name:"Total",v:H.map(x=>sums(x.zd))}],false);
+ const names=[...new Set(H.flatMap(x=>Object.keys(x.zd||{})))].sort((a,b)=>Math.max(...H.map(x=>(x.zd||{})[b]||0))-Math.max(...H.map(x=>(x.zd||{})[a]||0)));
+ h+=lineChart("Zero-days by finding",names.map(nm=>({name:nm,v:H.map(x=>(x.zd||{})[nm]===undefined?0:x.zd[nm])})),false);
+ for(const [k,t] of [["vow","Image VA closure % by app owner"],["cow","Compliance closure % by app owner"]]){
+  const on=[...new Set(H.flatMap(x=>Object.keys(x[k]||{})))];if(on.length<2)continue;
+  h+=lineChart(t,on.map(o=>({name:o,v:H.map(x=>(x[k]||{})[o]?cp(x[k][o]):null)})),true)}
+ document.getElementById("trg").innerHTML=h;
+ document.getElementById("trn").textContent=H.length<2?"Only one date saved. Add another to see a trend.":H.length+" saved dates, from "+dlb(H[0].d)+" to "+dlb(H[H.length-1].d)+". Up to 8 lines are shown per chart."}
+trends();
+</script></body></html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__NAME__: sheet view</title>
+<style>
+:root{--bg:#f6f5f3;--card:#fff;--ink:#1d1d22;--mut:#6b6b76;--line:#e3e1dc;--red:#d9001b;--grn:#0f8a5f;--bar:#e9e7e2}
+@media (prefers-color-scheme:dark){:root{--bg:#15151a;--card:#1e1e25;--ink:#f1f0ed;--mut:#9b9ba6;--line:#2e2e38;--red:#ff4d5e;--grn:#3ccf97;--bar:#2e2e38;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:24px 16px 48px}h1{font-size:25px;margin:0 0 4px}h2{font-size:16px;margin:0 0 10px}
+.sub{color:var(--mut);margin:0 0 16px}a{color:var(--red)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:14px}
+.k{color:var(--mut);font-size:13px}.v{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.f{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.f label{font-size:12px;color:var(--mut);display:block}
+select,input,button{font:inherit;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+button{background:var(--red);color:#fff;border:0;cursor:pointer}button.g{background:#555}
+.scroll{overflow:auto;max-height:420px}table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}th:first-child,td:first-child,th.l,td.l{text-align:left}
+th{color:var(--mut);font-size:13px;position:sticky;top:0;background:var(--card)}
+.b{display:flex;height:10px;min-width:120px;background:var(--bar);border-radius:5px;overflow:hidden}.b i{display:block;height:100%}
+.o{background:var(--red)}.c{background:var(--grn)}.leg span{display:inline-block;margin:2px 12px 2px 0;font-size:13px}.leg i{display:inline-block;width:12px;height:3px;margin-right:5px;vertical-align:middle}svg text{fill:var(--mut);font-size:11px}svg .g{stroke:var(--line)}.two{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+#msg{font-weight:600;margin-top:8px}
+</style></head><body><main>
+<h1>__NAME__: sheet view</h1>
+<p class="sub"><a href="/__APP__">Dashboard</a> &nbsp; <a href="/__APP__/update">Add screenshots</a> &nbsp; <span id="meta"></span></p>
+<div class="card"><h2>Upload tracker sheet (.xlsx)</h2>
+Sheet date: <input type="date" id="dt"> <input type="file" id="file" accept=".xlsx"> <button id="up">Upload and read</button>
+<div id="msg"></div><div class="k">Large sheets take about a minute. Needs columns Clusters, App Owners, Severity, Aging Status and Status (Open/Closed).</div></div>
+<div id="view" style="display:none">
+<div class="card"><div class="f">
+<div><label>Sheet date</label><select id="fd"></select></div>
+<div><label>App owner</label><select id="fo"></select></div><div><label>Cluster</label><select id="fc"></select></div>
+<div><label>Severity</label><select id="fs"></select></div><div><label>Aging</label><select id="fa"></select></div>
+<button class="g" id="rs">Reset filters</button></div></div>
+<div class="row" id="kpi"></div>
+<div class="card"><h2>Trend</h2><div class="f" style="margin-bottom:10px">
+<div><label>Metric</label><select id="tm"><option value="pct">Closure %</option><option value="o">Open count</option><option value="c">Closed count</option><option value="t">Total issues</option><option value="op">Open %</option></select></div>
+<div><label>Split by</label><select id="tg"><option value="-1">Overall</option><option value="1">App owner</option><option value="0">Cluster</option><option value="2">Severity</option><option value="3">Aging</option></select></div></div>
+<div id="chart"></div><div class="leg" id="leg"></div><div class="scroll" style="margin-top:8px"><table id="tt"></table></div>
+<div class="k" id="tn"></div></div>
+<div class="two"><div class="card"><h2>By cluster</h2><div class="scroll"><table id="tc"></table></div></div>
+<div class="card"><h2>By app owner</h2><div class="scroll"><table id="to"></table></div></div></div>
+<div class="card"><h2>App owner and cluster</h2><div class="scroll"><table id="tx"></table></div></div>
+<div class="card"><h2>Saved sheets</h2><div id="hist"></div></div>
+</div>
+<script>
+const APP="__APP__",SHEETS=__SHEETS__,$=id=>document.getElementById(id),fmt=n=>n.toLocaleString("en-IN"),msg=t=>$("msg").textContent=t;
+const dates=Object.keys(SHEETS).sort(),isC=s=>/^closed$/i.test(s),COL=["#d9001b","#2b6cb0","#0f8a5f","#b7791f","#805ad5","#dd6b20","#319795","#718096"];
+const dl=d=>new Date(d+"T00:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+// rows: [cluster, owner, severity, aging, status, count]
+function opts(id,i,label){const v=[...new Set(dates.flatMap(d=>SHEETS[d].rows.map(r=>r[i])))].sort();$(id).innerHTML=`<option value="">All ${label}</option>`+v.map(x=>`<option>${x}</option>`).join("")}
+const filt=()=>({0:$("fc").value,1:$("fo").value,2:$("fs").value,3:$("fa").value});
+const keep=(r,f)=>!((f[0]&&r[0]!==f[0])||(f[1]&&r[1]!==f[1])||(f[2]&&r[2]!==f[2])||(f[3]&&r[3]!==f[3]));
+const cell=(o,c)=>{const t=o+c||1;return `<div class="b"><i class="o" style="width:${o/t*100}%"></i><i class="c" style="width:${c/t*100}%"></i></div>`};
+function tot(d,f){let o=0,c=0;for(const r of SHEETS[d].rows)if(keep(r,f))isC(r[4])?c+=r[5]:o+=r[5];return{o,c,t:o+c}}
+function tbl(id,head,m){const rows=[...m.entries()].sort((a,b)=>b[1].o-a[1].o);
+ $(id).innerHTML=`<tr>${head.map((h,i)=>`<th class="${i<head.length?'l':''}">${h}</th>`).join("")}<th>Open</th><th>Closed</th><th>Total</th><th>Closure</th><th class="l">Open / closed</th></tr>`+
+ rows.map(([k,v])=>{const t=v.o+v.c;return `<tr>${k.split("\u0001").map(x=>`<td class="l">${x}</td>`).join("")}<td>${fmt(v.o)}</td><td>${fmt(v.c)}</td><td>${fmt(t)}</td><td>${t?(v.c/t*100).toFixed(1):"0.0"}%</td><td class="l">${cell(v.o,v.c)}</td></tr>`}).join("")}
+function metric(m,v){const t=v.o+v.c;return m==="o"?v.o:m==="c"?v.c:m==="t"?t:m==="op"?(t?v.o/t*100:0):(t?v.c/t*100:0)}
+function draw(){const f=filt(),d=$("fd").value,mc=new Map(),mo=new Map(),mx=new Map();
+ const add=(m,k,r)=>{const v=m.get(k)||{o:0,c:0};isC(r[4])?v.c+=r[5]:v.o+=r[5];m.set(k,v)};
+ for(const r of SHEETS[d].rows){if(!keep(r,f))continue;add(mc,r[0],r);add(mo,r[1],r);add(mx,r[1]+"\u0001"+r[0],r)}
+ const x=tot(d,f),pi=dates.indexOf(d)-1,p=pi>=0?tot(dates[pi],f):null,df=(a,b,good)=>p?`<div class="k" style="color:${(a-b<=0)===good?"var(--grn)":"var(--red)"}">${a-b>=0?"+":"\u2212"}${fmt(Math.abs(a-b))} vs ${dl(dates[pi])}</div>`:"";
+ const pc=(o,t)=>(t?o/t*100:0).toFixed(2)+"%";
+ $("kpi").innerHTML=[["Total",fmt(x.t),p?df(x.t,p.t,true):""],["Open",fmt(x.o),p?df(x.o,p.o,true):""],["Closed",fmt(x.c),p?df(x.c,p.c,false):""],["Closure",pc(x.c,x.t),p?`<div class="k">${pc(p.c,p.t)} on ${dl(dates[pi])}</div>`:""]]
+  .map(([k,v,e])=>`<div class="card" style="margin:0"><div class="k">${k}</div><div class="v">${v}</div>${e}</div>`).join("");
+ tbl("tc",["Cluster"],mc);tbl("to",["App owner"],mo);tbl("tx",["App owner","Cluster"],mx);trend(f)}
+function trend(f){const m=$("tm").value,g=+$("tg").value,S=new Map();
+ dates.forEach((d,i)=>{const M=new Map();for(const r of SHEETS[d].rows){if(!keep(r,f))continue;const k=g<0?"All issues":r[g],v=M.get(k)||{o:0,c:0};isC(r[4])?v.c+=r[5]:v.o+=r[5];M.set(k,v)}
+  M.forEach((v,k)=>{if(!S.has(k))S.set(k,{v:Array(dates.length).fill(null),t:0});const s=S.get(k);s.v[i]=metric(m,v);s.t=Math.max(s.t,v.o+v.c)})});
+ const ser=[...S.entries()].sort((a,b)=>b[1].t-a[1].t).slice(0,8),pct=m==="pct"||m==="op",W=900,H=300,L=62,R=16,T=14,B=30;
+ const all=ser.flatMap(([,s])=>s.v.filter(v=>v!==null)),mx=Math.max(pct?1:0,...all)*1.1||1,n=dates.length,X=i=>L+(n>1?i/(n-1)*(W-L-R):(W-L-R)/2),Y=v=>T+(1-v/mx)*(H-T-B);
+ const lab=v=>pct?v.toFixed(0)+"%":fmt(Math.round(v));
+ let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">`;
+ for(let i=0;i<=4;i++){const v=mx*i/4,y=Y(v);svg+=`<line class="g" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text x="${L-6}" y="${y+4}" text-anchor="end">${lab(v)}</text>`}
+ dates.forEach((d,i)=>svg+=`<text x="${X(i)}" y="${H-8}" text-anchor="middle">${dl(d)}</text>`);
+ ser.forEach(([k,s],j)=>{const c=COL[j%8],pts=s.v.map((v,i)=>v===null?null:[X(i),Y(v)]).filter(Boolean);
+  svg+=`<polyline fill="none" stroke="${c}" stroke-width="2.5" points="${pts.map(p=>p.join(",")).join(" ")}"/>`+pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${c}"/>`).join("")});
+ $("chart").innerHTML=svg+"</svg>";
+ $("leg").innerHTML=ser.map(([k],j)=>`<span><i style="background:${COL[j%8]}"></i>${k}</span>`).join("");
+ $("tt").innerHTML=`<tr><th class="l">${$("tg").selectedOptions[0].text}</th>${dates.map(d=>`<th>${dl(d)}</th>`).join("")}</tr>`+ser.map(([k,s])=>`<tr><td class="l">${k}</td>${s.v.map(v=>`<td>${v===null?"-":pct?v.toFixed(2)+"%":fmt(Math.round(v))}</td>`).join("")}</tr>`).join("");
+ $("tn").textContent=(n<2?"Only one sheet saved. Upload another sheet with a later date to see a trend. ":"")+(S.size>8?"Showing the 8 largest of "+S.size+" groups. Use the filters to focus. ":"")+"Filters above apply to the trend."}
+function hist(){$("hist").innerHTML=dates.map(d=>`<div>${d} &nbsp; ${SHEETS[d].filename} (${fmt(SHEETS[d].total)} rows) <button class="g" onclick="del('${d}')">Delete</button></div>`).join("")}
+async function del(d){if(!confirm("Delete the sheet for "+d+"?"))return;await fetch("/api/sheetdelete",{method:"POST",body:JSON.stringify({app:APP,date:d})});location.reload()}
+function init(){$("dt").value=new Date().toISOString().slice(0,10);if(!dates.length)return;$("view").style.display="";
+ $("meta").textContent=dates.length+" sheet"+(dates.length>1?"s":"")+" saved";
+ $("fd").innerHTML=dates.slice().reverse().map(d=>`<option value="${d}">${dl(d)} ${d.slice(0,4)}</option>`).join("");
+ opts("fo",1,"owners");opts("fc",0,"clusters");opts("fs",2,"severities");opts("fa",3,"aging");
+ ["fd","fo","fc","fs","fa","tm","tg"].forEach(i=>$(i).onchange=draw);$("rs").onclick=()=>{["fo","fc","fs","fa"].forEach(i=>$(i).value="");draw()};hist();draw()}
+$("up").onclick=()=>{const f=$("file").files[0];if(!f)return msg("Choose an .xlsx file first.");
+ const x=new XMLHttpRequest();x.open("POST","/api/sheet?app="+APP+"&date="+$("dt").value+"&name="+encodeURIComponent(f.name));
+ x.upload.onprogress=e=>msg("Uploading "+Math.round(e.loaded/e.total*100)+"%");
+ x.onload=()=>{const j=JSON.parse(x.responseText);if(j.error)return msg("Failed: "+j.error);msg("Reading the sheet...");poll(j.job)};
+ x.onerror=()=>msg("Upload failed.");x.send(f)};
+async function poll(id){const j=await (await fetch("/api/job?id="+id)).json();
+ if(j.status==="done")return location.reload();if(j.status==="error")return msg("Could not read: "+j.error);
+ msg("Reading the sheet... "+fmt(j.progress||0)+" rows");setTimeout(()=>poll(id),2000)}
+init();
+</script></main></body></html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__NAME__: Zero-day dashboard</title>
+<style>
+:root{--bg:#f6f5f3;--card:#fff;--ink:#1d1d22;--mut:#6b6b76;--line:#e3e1dc;--red:#d9001b;--grn:#0f8a5f;--bar:#ece9e4;--crit:#c8102e;--high:#e8710a;--med:#d9a400;--low:#2b6cb0;--none:#9aa0a6}
+@media (prefers-color-scheme:dark){:root{--bg:#15151a;--card:#1e1e25;--ink:#f1f0ed;--mut:#9b9ba6;--line:#2e2e38;--red:#ff4d5e;--grn:#3ccf97;--bar:#2e2e38;--crit:#ff5468;--high:#ff9a45;--med:#f0c33c;--low:#6ea8ff;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Arial,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 56px}h1{font-size:27px;margin:0 0 4px;letter-spacing:-.01em}h2{font-size:17px;margin:0 0 4px}
+.sub{color:var(--mut);margin:0 0 16px}a{color:var(--red)}.k{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px}
+.row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:14px}
+.kp .v{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.15}.kp{margin:0}
+.g2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));margin-bottom:14px}.g2 .card{margin:0}
+select,input,button{font:inherit;padding:6px 8px;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--ink);max-width:100%}
+button{background:var(--red);color:#fff;border:0;cursor:pointer}button.g{background:#555}button:disabled{opacity:.4}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:3px 11px;font-size:13px;cursor:pointer}
+.chip b{color:var(--mut);font-weight:600;margin-left:4px}.chip.on{background:var(--red);border-color:var(--red);color:#fff}.chip.on b{color:#fff}
+.f{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.f label{display:block;font-size:12px;color:var(--mut)}.f select{max-width:200px}
+.br{display:grid;grid-template-columns:150px 1fr 64px;gap:8px;align-items:center;margin:6px 0;font-size:14px;cursor:pointer}
+.br.on .l{font-weight:700;color:var(--red)}.br .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr{height:16px;display:flex;background:var(--bar);border-radius:8px;overflow:hidden}.tr>div{height:100%}.tr i{display:block;height:100%}
+.n{text-align:right;font-weight:600}.sp{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mut);margin:6px 0}
+.sp i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.donut{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.donut .lg div{margin:4px 0;font-size:14px;cursor:pointer}.donut .lg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:7px}
+.take li{margin:5px 0}.take ul{margin:6px 0 0;padding-left:20px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:600;position:sticky;top:0;background:var(--card);white-space:nowrap;cursor:pointer}td.r,th.r{text-align:right}
+.scroll{overflow:auto;max-height:560px}.pill{display:inline-block;padding:1px 8px;border-radius:999px;color:#fff;font-size:12px;font-weight:600}
+.hm td{text-align:right;cursor:pointer}.hm td:first-child{text-align:left}
+.tw{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+svg text{fill:var(--mut);font-size:11px}svg .gl{stroke:var(--line)}
+#msg{font-weight:600;margin-top:6px}.pg{display:flex;gap:10px;align-items:center;margin-top:10px}
+@media (max-width:520px){.g2{grid-template-columns:1fr}.br{grid-template-columns:100px 1fr 56px}}
+</style></head><body><main>
+<h1>__NAME__: zero-day exposure dashboard</h1>
+<p class="sub"><a href="/__APP__">Tracker dashboard</a> &nbsp; <a href="/__APP__/sheet">Sheet view</a> &nbsp; <span id="meta"></span></p>
+<div class="card"><h2>Upload zero-day workbook (.xlsx)</h2>
+<div class="f" style="margin-top:6px"><div><label>Sheet date</label><input type="date" id="dt"></div><div><label>File</label><input type="file" id="file" accept=".xlsx"></div><button id="up">Upload and read</button></div>
+<div id="msg"></div><div class="k">One sheet per zero-day category, with the usual Wiz export columns. Each upload is kept so trends build up over time.</div></div>
+
+<div id="app" hidden>
+<div class="card"><div class="f" style="margin-bottom:12px"><div><label>Sheet date</label><select id="dsel"></select></div>
+<div class="k" style="align-self:center">Click any bar, card or chart label to filter everything below.</div></div>
+<div class="chips" id="chips"></div>
+<div class="f"><div><label>Severity</label><select id="f-sev"></select></div><div><label>Cluster</label><select id="f-cluster"></select></div>
+<div><label>Namespace</label><select id="f-ns"></select></div><div><label>SubscriptionName</label><select id="f-sub"></select></div>
+<div><label>Exploit</label><select id="f-exp"></select></div><div><label>Fix needed</label><select id="f-fix"></select></div>
+<div><label>Search CVE, asset, package</label><input id="f-q" placeholder="type to search"></div><button class="g" id="reset">Reset all</button></div></div>
+
+<div class="row" id="kpi"></div>
+<div class="card take"><h2>Key takeaways</h2><ul id="take"></ul></div>
+<div class="g2"><div class="card"><h2>Findings by zero-day category</h2><div class="k">Bars are split by severity. Click a bar to see only that category.</div>
+<label class="k"><input type="checkbox" id="cmp" checked> Compact scale, so small categories stay visible</label><div class="sp" id="cleg"></div><div id="cat"></div></div>
+<div class="card"><h2>Severity mix</h2><div class="k">Click a severity to filter.</div><div class="donut" id="donut"></div>
+<h2 style="margin-top:18px">How long have they been open?</h2><div class="k">Days since first detected, as of the sheet date.</div><div id="age"></div></div></div>
+<div class="g2"><div class="card"><h2>Category and severity</h2><div class="k">Darker cell = more findings. Click a row or cell to filter.</div><div class="scroll" style="max-height:380px"><table class="hm" id="heat"></table></div></div>
+<div class="card"><h2>Top fixes to prioritise</h2><div class="k">Same fix clears many findings. Click to filter.</div><div id="fixes"></div></div></div>
+<div class="g2"><div class="card"><h2>Where findings run: clusters</h2><div id="clus"></div></div><div class="card"><h2>Where findings run: subscriptions</h2><div id="subs"></div></div></div>
+<div class="card"><h2>Trend across uploads</h2><div class="k" id="trn"></div><div class="g2" style="margin-top:10px"><div id="t1"></div><div id="t2"></div></div></div>
+<div class="card"><div class="f" style="justify-content:space-between;align-items:center"><div><h2 id="ttl">Issues</h2><div class="k">Filtered with everything above. Click a column heading to sort.</div></div><button id="csv">Download CSV</button></div>
+<div class="scroll" style="margin-top:8px"><table id="tbl"></table></div><div class="pg"><button class="g" id="prev">Previous</button><span id="pi" class="k"></span><button class="g" id="next">Next</button></div></div>
+<div class="card"><h2>Saved sheets</h2><div id="hist"></div></div>
+</div>
+<script>
+const APP="__APP__",SUMS=__SUMS__,$=id=>document.getElementById(id),fmt=n=>Number(n).toLocaleString("en-IN"),msg=t=>$("msg").textContent=t;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dates=Object.keys(SUMS).sort(),SEV=["Critical","High","Medium","Low"],SC={Critical:"var(--crit)",High:"var(--high)",Medium:"var(--med)",Low:"var(--low)"},sr=s=>{const i=SEV.indexOf(s);return i<0?9:i};
+const dl=d=>new Date(d+"T00:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+const COL=["#c8102e","#2b6cb0","#0f8a5f","#d9a400","#805ad5","#e8710a","#319795","#718096"];
+let D=[],FT={cat:"",sev:"",cluster:"",ns:"",sub:"",fix:"",exp:"",q:""},sortK="sev",sortD=1,page=0,cur="";
+const sc=v=>$("cmp").checked?Math.sqrt(v):v;
+function match(o,skip=[]){for(const k of ["cat","sev","cluster","ns","sub","fix"])if(!skip.includes(k)&&FT[k]&&o[k]!==FT[k])return false;
+ if(!skip.includes("exp")){if(FT.exp==="kev"&&!o.kev)return false;if(FT.exp==="exp"&&!o.exp)return false}
+ return !(FT.q&&!o.s.includes(FT.q))}
+const by=(rows,k)=>{const m=new Map();rows.forEach(o=>m.set(o[k],(m.get(o[k])||0)+1));return[...m.entries()].sort((a,b)=>b[1]-a[1])};
+const pct=(a,b)=>b?(a/b*100).toFixed(1)+"%":"0%";
+async function load(d){cur=d;$("meta").textContent="Loading data...";
+ const j=await (await fetch(`/api/zd?app=${APP}&date=${d}`)).json();
+ if(!j.rows){$("meta").textContent="Could not load data for "+d;return}
+ const ref=new Date(d+"T00:00:00");
+ D=j.rows.map(r=>{const o={};j.cols.forEach((c,i)=>o[c]=j.tab[c]?j.tab[c][r[i]]:r[i]);
+  o.age=Math.max(0,Math.round((ref-new Date(o.first+"T00:00:00"))/864e5));if(isNaN(o.age))o.age=-1;
+  o.s=(o.cve+" "+o.pkg+" "+o.asset+" "+o.fix+" "+o.cat).toLowerCase();return o});
+ const S=SUMS[d];$("meta").textContent=`${S.filename} | ${fmt(S.total)} findings | sheet date ${d}`;page=0;render()}
+function bars(id,rows,key,total){const mx=Math.max(1,...rows.map(r=>r[1]));
+ $(id).innerHTML=rows.slice(0,10).map(([k,n])=>`<div class="br${FT[key]===k?" on":""}" data-f="${key}" data-v="${esc(k)}" title="${esc(k)}"><div class="l">${esc(k)}</div><div class="tr"><i style="width:${n/mx*100}%;background:var(--red)"></i></div><div class="n">${fmt(n)}</div></div>`).join("")||'<div class="k">No findings</div>'}
+function render(){
+ const F=D.filter(o=>match(o)),Fc=D.filter(o=>match(o,["cat"])),Fs=D.filter(o=>match(o,["sev"])),Fh=D.filter(o=>match(o,["cat","sev"]));
+ // chips
+ const cc=by(Fc,"cat");$("chips").innerHTML=`<span class="chip${FT.cat?"":" on"}" data-f="cat" data-v="">All categories<b>${fmt(Fc.length)}</b></span>`+cc.map(([k,n])=>`<span class="chip${FT.cat===k?" on":""}" data-f="cat" data-v="${esc(k)}">${esc(k)}<b>${fmt(n)}</b></span>`).join("");
+ // cascading dropdowns
+ const sel=(id,key,all,rows)=>{const el=$(id),v=FT[key],c=by(rows,key);if(v&&!c.find(x=>x[0]===v))c.push([v,0]);
+  el.innerHTML=`<option value="">${all}</option>`+c.map(([k,n])=>`<option value="${esc(k)}"${k===v?" selected":""}>${esc(k.length>60?k.slice(0,58)+"...":k)} (${fmt(n)})</option>`).join("")};
+ const sevRows=by(Fs,"sev").sort((a,b)=>sr(a[0])-sr(b[0]));
+ sel("f-sev","sev","All severities",Fs);$("f-sev").innerHTML=`<option value="">All severities</option>`+sevRows.map(([k,n])=>`<option value="${esc(k)}"${k===FT.sev?" selected":""}>${esc(k)} (${fmt(n)})</option>`).join("");
+ sel("f-cluster","cluster","All clusters",D.filter(o=>match(o,["cluster"])));sel("f-ns","ns","All namespaces",D.filter(o=>match(o,["ns"])));
+ sel("f-sub","sub","All subscriptions",D.filter(o=>match(o,["sub"])));sel("f-fix","fix","All fixes",D.filter(o=>match(o,["fix"])));
+ const Fe=D.filter(o=>match(o,["exp"]));$("f-exp").innerHTML=`<option value="">Any</option><option value="exp"${FT.exp==="exp"?" selected":""}>Has known exploit (${fmt(Fe.filter(o=>o.exp).length)})</option><option value="kev"${FT.exp==="kev"?" selected":""}>On CISA KEV list (${fmt(Fe.filter(o=>o.kev).length)})</option>`;
+ // KPIs
+ const crit=F.filter(o=>o.sev==="Critical").length,kev=F.filter(o=>o.kev).length,ex=F.filter(o=>o.exp).length,assets=new Set(F.map(o=>o.aid)).size,cl=new Set(F.filter(o=>o.cluster!=="(none)").map(o=>o.cluster)).size;
+ const none=!Object.values(FT).some(Boolean),pv=dates[dates.indexOf(cur)-1],P=pv&&none?SUMS[pv]:null,ps=P?{t:P.total,c:Object.values(P.cats).reduce((a,x)=>a+x.Critical,0),k:Object.values(P.cats).reduce((a,x)=>a+x.kev,0)}:null;
+ const dd=(a,b)=>ps?`<div class="k" style="color:${a<=b?"var(--grn)":"var(--red)"}">${a>=b?"+":"\u2212"}${fmt(Math.abs(a-b))} vs ${dl(pv)}</div>`:"";
+ $("kpi").innerHTML=[["Open findings",fmt(F.length),dd(F.length,ps&&ps.t)],["Critical",fmt(crit),dd(crit,ps&&ps.c)],["Known exploit",fmt(ex),""],["On CISA KEV list",fmt(kev),dd(kev,ps&&ps.k)],["Assets affected",fmt(assets),""],["Clusters affected",fmt(cl),""]]
+  .map(([k,v,e])=>`<div class="card kp"><div class="k">${k}</div><div class="v">${v}</div>${e}</div>`).join("");
+ // takeaways
+ const tc=by(F,"cat"),old=F.filter(o=>o.age>30).length,nc=F.filter(o=>o.cluster==="(none)").length,L=[];
+ if(F.length){L.push(`<b>${fmt(F.length)}</b> open findings across <b>${tc.length}</b> zero-day ${tc.length===1?"category":"categories"}${FT.cat?"":`. The largest is <b>${esc(tc[0][0])}</b> with ${fmt(tc[0][1])} (${pct(tc[0][1],F.length)} of the total).`}`);
+  L.push(`<b>${fmt(crit)}</b> are Critical (${pct(crit,F.length)}). <b>${fmt(kev)}</b> are on the CISA known-exploited list and <b>${fmt(ex)}</b> have a public exploit.`);
+  L.push(`<b>${fmt(old)}</b> findings (${pct(old,F.length)}) have been open more than 30 days.`);
+  if(nc)L.push(`<b>${fmt(nc)}</b> findings (${pct(nc,F.length)}) have no cluster recorded in the sheet.`);
+  const fx=by(F,"fix");if(fx.length)L.push(`The most common fix, <b>${esc(fx[0][0])}</b>, would clear ${fmt(fx[0][1])} findings.`)}
+ else L.push("No findings match the current filters.");
+ $("take").innerHTML=L.map(x=>`<li>${x}</li>`).join("");
+ // category chart
+ const cg={};Fc.forEach(o=>{const g=cg[o.cat]||(cg[o.cat]={t:0,Critical:0,High:0,Medium:0,Low:0,other:0});g.t++;SEV.includes(o.sev)?g[o.sev]++:g.other++});
+ const ce=Object.entries(cg).sort((a,b)=>b[1].t-a[1].t),cm=Math.max(1,...ce.map(e=>sc(e[1].t)));
+ $("cleg").innerHTML=SEV.map(s=>`<span><i style="background:${SC[s]}"></i>${s}</span>`).join("");
+ $("cat").innerHTML=ce.map(([k,g])=>`<div class="br${FT.cat===k?" on":""}" data-f="cat" data-v="${esc(k)}"><div class="l" title="${esc(k)}">${esc(k)}</div><div class="tr"><div style="width:${sc(g.t)/cm*100}%;display:flex">${SEV.map(s=>g[s]?`<i style="width:${g[s]/g.t*100}%;background:${SC[s]}" title="${s}: ${g[s]}"></i>`:"").join("")}${g.other?`<i style="width:${g.other/g.t*100}%;background:var(--none)"></i>`:""}</div></div><div class="n">${fmt(g.t)}</div></div>`).join("")||'<div class="k">No findings</div>';
+ // donut
+ const ds=SEV.map(s=>[s,Fs.filter(o=>o.sev===s).length]),dt=ds.reduce((a,x)=>a+x[1],0),R=52,C=2*Math.PI*R;let off=0;
+ $("donut").innerHTML=`<svg viewBox="0 0 140 140" width="150" height="150" role="img" aria-label="Severity mix"><circle cx="70" cy="70" r="${R}" fill="none" stroke="var(--bar)" stroke-width="22"/>`+
+  ds.map(([s,n])=>{const l=dt?n/dt*C:0,e=`<circle cx="70" cy="70" r="${R}" fill="none" stroke="${SC[s]}" stroke-width="22" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)" data-f="sev" data-v="${s}" style="cursor:pointer"/>`;off+=l;return e}).join("")+
+  `<text x="70" y="68" text-anchor="middle" style="font-size:20px;font-weight:700;fill:var(--ink)">${fmt(dt)}</text><text x="70" y="84" text-anchor="middle">findings</text></svg><div class="lg">`+
+  ds.map(([s,n])=>`<div data-f="sev" data-v="${s}" style="${FT.sev===s?"font-weight:700":""}"><i style="background:${SC[s]}"></i>${s}: ${fmt(n)} (${pct(n,dt)})</div>`).join("")+"</div>";
+ // age
+ const bk=[["0 to 7 days",0,7],["8 to 30 days",8,30],["31 to 90 days",31,90],["Over 90 days",91,1e9]],am=Math.max(1,...bk.map(b=>F.filter(o=>o.age>=b[1]&&o.age<=b[2]).length));
+ $("age").innerHTML=bk.map((b,i)=>{const n=F.filter(o=>o.age>=b[1]&&o.age<=b[2]).length;return `<div class="br" style="cursor:default"><div class="l">${b[0]}</div><div class="tr"><i style="width:${n/am*100}%;background:${["var(--grn)","var(--med)","var(--high)","var(--crit)"][i]}"></i></div><div class="n">${fmt(n)}</div></div>`}).join("");
+ // heatmap
+ const hg={};Fh.forEach(o=>{const g=hg[o.cat]||(hg[o.cat]={t:0,Critical:0,High:0,Medium:0,Low:0});g.t++;if(SEV.includes(o.sev))g[o.sev]++});
+ const hm=Math.max(1,...Object.values(hg).flatMap(g=>SEV.map(s=>g[s])));
+ $("heat").innerHTML=`<tr><th>Category</th>${SEV.map(s=>`<th class="r">${s}</th>`).join("")}<th class="r">Total</th></tr>`+Object.entries(hg).sort((a,b)=>b[1].t-a[1].t).map(([k,g])=>`<tr class="${FT.cat===k?"on":""}"><td data-f="cat" data-v="${esc(k)}" style="font-weight:${FT.cat===k?700:400}">${esc(k)}</td>${SEV.map(s=>`<td data-f2="${s}" data-f="cat" data-v="${esc(k)}" style="background:color-mix(in srgb,${SC[s]} ${Math.round(Math.sqrt(g[s]/hm)*70)}%,transparent)">${g[s]?fmt(g[s]):"-"}</td>`).join("")}<td class="n">${fmt(g.t)}</td></tr>`).join("");
+ // fixes, clusters, subscriptions
+ bars("fixes",by(D.filter(o=>match(o,["fix"])),"fix"),"fix");bars("clus",by(D.filter(o=>match(o,["cluster"])),"cluster"),"cluster");bars("subs",by(D.filter(o=>match(o,["sub"])),"sub"),"sub");
+ trend();table(F);hist()}
+function lineChart(id,title,series,useSc){const n=dates.length,W=560,H=220,L=54,R=12,T=10,B=26,f=useSc&&$("cmp").checked?Math.sqrt:(v=>v),inv=useSc&&$("cmp").checked?(v=>v*v):(v=>v);
+ const ser=series.filter(s=>s.v.some(v=>v!==null)).slice(0,8);if(!ser.length){$(id).innerHTML="";return}
+ const mx=Math.max(1,...ser.flatMap(s=>s.v.filter(v=>v!==null).map(f)))*1.1,X=i=>L+(n>1?i/(n-1)*(W-L-R):(W-L-R)/2),Y=v=>T+(1-f(v)/mx)*(H-T-B);
+ let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(title)}">`;
+ for(let i=0;i<=4;i++){const v=inv(mx*i/4),y=Y(v);s+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text x="${L-6}" y="${y+4}" text-anchor="end">${fmt(Math.round(v))}</text>`}
+ dates.forEach((d,i)=>s+=`<text x="${X(i)}" y="${H-7}" text-anchor="middle">${dl(d)}</text>`);
+ ser.forEach((q,j)=>{const c=COL[j%8],p=q.v.map((v,i)=>v===null?null:[X(i),Y(v)]).filter(Boolean);s+=`<polyline fill="none" stroke="${c}" stroke-width="2.5" points="${p.map(x=>x.join(",")).join(" ")}"/>`+p.map(x=>`<circle cx="${x[0]}" cy="${x[1]}" r="3.5" fill="${c}"/>`).join("")});
+ $(id).innerHTML=`<h2 style="font-size:15px">${esc(title)}</h2>${s}</svg><div class="sp">${ser.map((q,j)=>`<span><i style="background:${COL[j%8]}"></i>${esc(q.name)}</span>`).join("")}</div>`}
+function trend(){const n=dates.length,cs=c=>dates.map(d=>{const x=SUMS[d].cats[c];return x?x:null});
+ const cats=FT.cat?[FT.cat]:[...new Set(dates.flatMap(d=>Object.keys(SUMS[d].cats)))];
+ const tot=dates.map(d=>cats.reduce((a,c)=>a+((SUMS[d].cats[c]||{}).n||0),0)),cr=dates.map(d=>cats.reduce((a,c)=>a+((SUMS[d].cats[c]||{}).Critical||0),0));
+ lineChart("t1","Total and Critical findings"+(FT.cat?": "+FT.cat:""),[{name:"All findings",v:tot},{name:"Critical",v:cr}],false);
+ const top=[...cats].sort((a,b)=>Math.max(...cs(b).map(x=>x?x.n:0))-Math.max(...cs(a).map(x=>x?x.n:0)));
+ lineChart("t2","Findings by category",top.map(c=>({name:c,v:cs(c).map(x=>x?x.n:null)})),true);
+ $("trn").textContent=n<2?"Only one sheet saved. Upload another sheet with a later date to see the trend.":`${n} sheets saved, ${dl(dates[0])} to ${dl(dates[n-1])}. Trends use the sheet totals; the category filter applies, other filters do not.`}
+const COLS=[["cat","Category"],["cve","CVE"],["sev","Severity"],["score","CVSS","r"],["epss","EPSS %","r"],["exp","Exploit"],["kev","CISA KEV"],["pkg","Package"],["cluster","Cluster"],["ns","Namespace"],["sub","SubscriptionName"],["asset","AssetName"],["first","First detected"],["fix","Remediation"]];
+function sorted(F){const k=sortK,d=sortD;return F.slice().sort((a,b)=>{let x=a[k],y=b[k];if(k==="sev"){x=sr(x);y=sr(y);if(x===y)return b.score-a.score}else if(typeof x==="string"){return d*x.localeCompare(y)}return d*(x-y)})}
+function table(F){const S=sorted(F),pages=Math.max(1,Math.ceil(S.length/50));if(page>=pages)page=pages-1;const P=S.slice(page*50,page*50+50);
+ $("ttl").textContent=`Issues (${fmt(F.length)}${FT.cat?" in "+FT.cat:""})`;
+ $("tbl").innerHTML=`<tr>${COLS.map(c=>`<th class="${c[2]||""}" data-s="${c[0]}">${c[1]}${sortK===c[0]?(sortD>0?" \u25B2":" \u25BC"):""}</th>`).join("")}</tr>`+P.map(o=>`<tr><td>${esc(o.cat)}</td><td>${esc(o.cve)}</td><td><span class="pill" style="background:${SC[o.sev]||"var(--none)"}">${esc(o.sev)}</span></td><td class="r">${o.score}</td><td class="r">${o.epss}</td><td>${o.exp?"Yes":"No"}</td><td>${o.kev?"Yes":"No"}</td><td class="tw" title="${esc(o.pkg+" "+o.ver+" -> "+o.fixed)}">${esc(o.pkg)} ${esc(o.ver)} &rarr; ${esc(o.fixed)}</td><td>${esc(o.cluster)}</td><td>${esc(o.ns)}</td><td>${esc(o.sub)}</td><td class="tw" title="${esc(o.asset)}">${esc(o.asset)}</td><td>${esc(o.first)}</td><td class="tw" title="${esc(o.fix)}">${esc(o.fix)}</td></tr>`).join("");
+ $("pi").textContent=`Page ${page+1} of ${pages}`;$("prev").disabled=page===0;$("next").disabled=page>=pages-1}
+function csv(){const F=sorted(D.filter(o=>match(o))),cols=COLS.map(c=>c[0]).concat(["ver","fixed","det","aid","region","proj"]),q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+ const t=[cols.join(",")].concat(F.map(o=>cols.map(c=>q(o[c])).join(","))).join("\n"),a=document.createElement("a");
+ a.href=URL.createObjectURL(new Blob([t],{type:"text/csv"}));a.download=`${APP}-zero-day-${cur}.csv`;a.click()}
+function hist(){$("hist").innerHTML=dates.map(d=>`<div>${d} &nbsp; ${esc(SUMS[d].filename)} (${fmt(SUMS[d].total)} findings) <button class="g" data-del="${d}">Delete</button></div>`).join("")}
+document.addEventListener("click",e=>{const t=e.target.closest("[data-f]");if(t){const f=t.dataset.f,v=t.dataset.v;FT[f]=FT[f]===v?"":v;if(t.dataset.f2)FT.sev=FT.sev===t.dataset.f2&&FT[f]===v?"":t.dataset.f2;page=0;render();return}
+ const s=e.target.closest("[data-s]");if(s){sortD=sortK===s.dataset.s?-sortD:(["score","epss","exp","kev"].includes(s.dataset.s)?-1:1);sortK=s.dataset.s;render();return}
+ const d=e.target.closest("[data-del]");if(d&&confirm("Delete the sheet for "+d.dataset.del+"?"))fetch("/api/zddelete",{method:"POST",body:JSON.stringify({app:APP,date:d.dataset.del})}).then(()=>location.reload())});
+["sev","cluster","ns","sub","fix","exp"].forEach(k=>$("f-"+k).onchange=e=>{FT[k]=e.target.value;page=0;render()});
+let tm;$("f-q").oninput=e=>{clearTimeout(tm);tm=setTimeout(()=>{FT.q=e.target.value.toLowerCase().trim();page=0;render()},250)};
+$("reset").onclick=()=>{FT={cat:"",sev:"",cluster:"",ns:"",sub:"",fix:"",exp:"",q:""};$("f-q").value="";page=0;render()};
+$("cmp").onchange=render;$("prev").onclick=()=>{page--;render()};$("next").onclick=()=>{page++;render()};$("csv").onclick=csv;
+$("dsel").onchange=e=>{FT={cat:"",sev:"",cluster:"",ns:"",sub:"",fix:"",exp:"",q:""};$("f-q").value="";load(e.target.value)};
+$("dt").value=new Date().toISOString().slice(0,10);
+$("up").onclick=()=>{const f=$("file").files[0];if(!f)return msg("Choose an .xlsx file first.");
+ const x=new XMLHttpRequest();x.open("POST","/api/zd?app="+APP+"&date="+$("dt").value+"&name="+encodeURIComponent(f.name));
+ x.upload.onprogress=e=>msg("Uploading "+Math.round(e.loaded/e.total*100)+"%");
+ x.onload=()=>{const j=JSON.parse(x.responseText);if(j.error)return msg("Failed: "+j.error);msg("Reading the workbook...");poll(j.job)};x.onerror=()=>msg("Upload failed.");x.send(f)};
+async function poll(id){const j=await (await fetch("/api/job?id="+id)).json();if(j.status==="done")return location.reload();if(j.status==="error")return msg("Could not read: "+j.error);
+ msg("Reading the workbook... "+fmt(j.progress||0)+" rows");setTimeout(()=>poll(id),1500)}
+if(dates.length){$("app").hidden=false;$("dsel").innerHTML=dates.slice().reverse().map(d=>`<option value="${d}">${dl(d)} ${d.slice(0,4)}</option>`).join("");load(dates[dates.length-1])}
+</script></main></body></html>
